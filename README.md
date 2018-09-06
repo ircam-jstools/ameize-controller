@@ -1,7 +1,7 @@
 # ameize-controller
 
 > Electron application dedicated to the management and rapid prototyping of 
-> web-based embedded audio applications.
+> web-based embedded and distributed audio applications.
 > 
 > cf. [https://github.com/ircam-jstools/ameize-client](https://github.com/ircam-jstools/ameize-client)
 
