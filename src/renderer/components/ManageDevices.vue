@@ -1,0 +1,212 @@
+<template>
+  <div id="manage-devices">
+    <h1>Manage Devices</h1>
+
+    <h3>Execute Command</h3>
+    <label>
+      <span>cmd</span>
+      <input type="text" v-model="execCmd" />
+    </label>
+    <label>
+      <span>cwd</span>
+      <input type="text" v-model="execCwd" />
+    </label>
+    <button class="btn" @click="executeCmd">execute</button>
+
+    <h3>Fork Process</h3>
+    <label>
+      <span>cwd</span>
+      <input type="text" v-model="processCwd" />
+    </label>
+    <label>
+      <span>cmd</span>
+      <input type="text" v-model="processCmd" />
+    </label>
+    <button class="btn blue" v-if="!processForked" @click="forkProcess">fork</button>
+    <button class="btn red" v-if="processForked" @click="killProcess">kill</button>
+
+    <h3>Sync Directory</h3>
+
+    <label>
+      <span>local</span>
+      <input type="text" v-model="syncLocal" />
+    </label>
+    <label>
+      <span>remote<br />(/home/pi/apps)</span>
+      <input type="text" v-model="syncRemote" />
+    </label>
+    <button class="btn" @click="syncDirectory">sync</button>
+    <button class="btn blue" v-if="!directoryWatched" @click="startWatchingDirectory">watch</button>
+    <button class="btn red" v-if="directoryWatched" @click="stopWatchingDirectory">stop</button>
+
+    <h3>client list</h3>
+    <ul id="client-list">
+      <li class="client" v-for="client in clients">
+        <div class="connection" v-bind:class="{ active : client.connected }">&nbsp;</div>
+        <p>{{ client.payload.hostname }} ({{ client.rinfo.address }}:{{ client.rinfo.port }})</p>
+      </li>
+    </ul>
+
+    <!-- for debug or later gui improvements -->
+    <!-- <pre>{{ tokens }}</pre> -->
+  </div>
+</template>
+
+<script>
+  import uuid from 'uuid/v4';
+
+  function createToken(type, client) {
+    return {
+      uuid: uuid(),
+      type: type,
+      client: client,
+      status: '',
+    };
+  }
+
+  export default {
+    name: 'manage-devices',
+    components: {},
+    data: function() {
+      return {
+        execCmd: 'ls -al',
+        execCwd: '/home/pi',
+
+        processCwd: '/home/pi/apps/test-process',
+        processCmd: 'npm run watch:pi',
+
+        syncLocal: '/Users/matuszewski/dev/pi/_local/test-process/',
+        syncRemote: '/home/pi/apps/test-process/',
+      };
+    },
+
+    computed: {
+      clients() { return this.$store.getters['clients/all']; },
+      tokens() { return this.$store.getters['clients/tokens']; },
+
+      processForked() {
+        const tokens = this.$store.getters['clients/tokens'];
+        const t = tokens.find(token => token.type === 'fork-process' && token.status === 'running');
+
+        return !!t;
+      },
+      directoryWatched() {
+        const tokens = this.$store.getters['clients/tokens'];
+        const t = tokens.find(token => token.type === 'watch-directory' && token.status === 'watching');
+
+        return !!t;
+      },
+    },
+
+    methods: {
+      executeCmd() {
+        const connectedClients = this.$store.getters['clients/connected'];
+        // const tokens = this.$store.dispatch('clients/create')
+        const tokens = connectedClients.map(client => createToken('execute-cmd', client));
+        this.$store.dispatch('clients/addTokens', tokens);
+
+        this.$electron.ipcRenderer.send('devices:execute-cmd', this.execCwd, this.execCmd, tokens);
+      },
+      forkProcess() {
+        const connectedClients = this.$store.getters['clients/connected'];
+
+        const tokens = connectedClients.map(client => createToken('fork-process', client));
+        this.$store.dispatch('clients/addTokens', tokens);
+
+        this.$electron.ipcRenderer.send('devices:fork-process', this.processCwd, this.processCmd, tokens);
+      },
+      killProcess() {
+        const connectedClients = this.$store.getters['clients/connected'];
+
+        const tokens = connectedClients.map(client => createToken('fork-process', client));
+        this.$store.dispatch('clients/addTokens', tokens);
+
+        this.$electron.ipcRenderer.send('devices:kill-process', tokens);
+      },
+      syncDirectory() {
+        const connectedClients = this.$store.getters['clients/connected'];
+
+        const tokens = connectedClients.map(client => createToken('sync-directory', client));
+        this.$store.dispatch('clients/addTokens', tokens);
+
+        this.$electron.ipcRenderer.send('devices:sync-directory', this.syncLocal, this.syncRemote, tokens);
+      },
+      startWatchingDirectory() {
+        const connectedClients = this.$store.getters['clients/connected'];
+
+        const tokens = connectedClients.map(client => createToken('watch-directory', client));
+        this.$store.dispatch('clients/addTokens', tokens);
+
+        this.$electron.ipcRenderer.send('devices:start-watching-directory', this.syncLocal, this.syncRemote, tokens);
+      },
+      stopWatchingDirectory() {
+        this.$electron.ipcRenderer.send('devices:stop-watching-directory');
+      },
+    }
+  };
+</script>
+
+<style scoped>
+  /* @todo - use fork and sync in presentation/icons directory */
+
+  ul {
+    list-style-type: none;
+    padding: 0;
+  }
+
+  li.client {
+    margin-bottom: 8px;
+    vertical-align: middle;
+  }
+
+  .client .connection {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    background-color: #d9534f;
+    text-content: " ";
+    position: relative;
+    top: -2px;
+    border-radius: 50%;
+  }
+
+  .client .connection.active {
+    background-color: #5cb85c;
+  }
+
+  .client p {
+    display: inline-block;
+    height: 20px;
+    margin: 0;
+  }
+</style>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
