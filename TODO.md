@@ -1,13 +1,15 @@
 
 # controller
 
--cwd and cmd in same order (execute and fork)
+- Electron crashes (due to firewall?)
+
+- cwd and cmd in same order (execute and fork)
+- remember last typed strings
 
 ## sync
- - "source/" to "dest" (force slashes)
+~~ - "source/" to "dest" (force slashes)
 
 ## Emulate Devices
- - keep application path (and command)
  - use 'ssh -t' to be able to answer interactive questions
 
 # Boilerplate
