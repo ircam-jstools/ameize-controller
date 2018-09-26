@@ -124,10 +124,10 @@ const manageDevices = {
       let cmd = '';
 
       if (/debug/.test(hostname)) { // we are in debug mode
-        cmd = `rsync --recursive --exclude="node_modules" --delete-after ${localDirectory} ${remoteDirectory}`;
+        cmd = `rsync --archive --exclude="node_modules" --delete-after ${localDirectory}/ ${remoteDirectory}`;
       } else {
         // rsync -e ssh -avz --delete-after "/home/source\ avec\ espace/" user@ip_du_serveur:"/dossier/destination\ avec\ espace/"
-        cmd = `rsync --recursive --exclude="node_modules" --delete-after ${localDirectory} pi@${hostname}.local:${remoteDirectory}`;
+        cmd = `rsync --archive --exclude="node_modules" --delete-after ${localDirectory}/ pi@${hostname}.local:${remoteDirectory}`;
       }
 
       exec(cmd, (err, stdout, stderr) => {
