@@ -24,11 +24,13 @@ const discoveryServer = new DiscoveryServer({ verbose: false });
 function monitorClients(mainWindow) {
   discoveryServer.addListener('connection', (client, clients) => {
     client.id = client.payload.hostname;
+    console.log('connected')
     mainWindow.webContents.send('client:connect', client);
   });
 
   discoveryServer.addListener('close', (client, clients) => {
     client.id = client.payload.hostname;
+    console.log('disconnected')
     mainWindow.webContents.send('client:disconnect', client);
   });
 

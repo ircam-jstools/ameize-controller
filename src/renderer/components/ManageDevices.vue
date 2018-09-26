@@ -5,22 +5,22 @@
     <h3>Execute Command</h3>
     <label>
       <span>cmd</span>
-      <input type="text" v-model="execCmd" />
+      <input type="text" v-model="execCmd" @blur="saveCommands" />
     </label>
     <label>
       <span>cwd</span>
-      <input type="text" v-model="execCwd" />
+      <input type="text" v-model="execCwd" @blur="saveCommands" />
     </label>
     <button class="btn" @click="executeCmd">execute</button>
 
     <h3>Fork Process</h3>
     <label>
       <span>cwd</span>
-      <input type="text" v-model="processCwd" />
+      <input type="text" v-model="processCwd" @blur="saveCommands" />
     </label>
     <label>
       <span>cmd</span>
-      <input type="text" v-model="processCmd" />
+      <input type="text" v-model="processCmd" @blur="saveCommands" />
     </label>
     <button class="btn blue" v-if="!processForked" @click="forkProcess">fork</button>
     <button class="btn red" v-if="processForked" @click="killProcess">kill</button>
@@ -33,7 +33,7 @@
     </label>
     <label>
       <span>remote<br />(/home/pi/apps)</span>
-      <input type="text" v-model="syncRemote" />
+      <input type="text" v-model="syncRemote" @blur="saveCommands" />
     </label>
     <button class="btn" @click="syncDirectory">sync</button>
     <button class="btn blue" v-if="!directoryWatched" @click="startWatchingDirectory">watch</button>
@@ -69,21 +69,19 @@
     components: {},
     data: function() {
       return {
-        execCmd: 'ls -al',
-        execCwd: '/home/pi',
+        execCmd: this.$store.getters['commands/execCmd'],
+        execCwd: this.$store.getters['commands/execCwd'],
+        processCwd: this.$store.getters['commands/processCwd'],
+        processCmd: this.$store.getters['commands/processCmd'],
+        syncLocal: this.$store.getters['commands/syncLocal'],
+        syncRemote: this.$store.getters['commands/syncRemote'],
 
-        processCwd: '/home/pi/apps/test-process',
-        processCmd: 'npm run watch:pi',
-
-        syncLocal: '/Users/matuszewski/dev/pi/_local/test-process/',
-        syncRemote: '/home/pi/apps/test-process/',
+        clients: this.$store.getters['clients/all'],
+        tokens: this.$store.getters['clients/tokens'],
       };
     },
 
     computed: {
-      clients() { return this.$store.getters['clients/all']; },
-      tokens() { return this.$store.getters['clients/tokens']; },
-
       processForked() {
         const tokens = this.$store.getters['clients/tokens'];
         const t = tokens.find(token => token.type === 'fork-process' && token.status === 'running');
@@ -100,6 +98,7 @@
 
     methods: {
       executeCmd() {
+        this.saveCommands();
         const connectedClients = this.$store.getters['clients/connected'];
         // const tokens = this.$store.dispatch('clients/create')
         const tokens = connectedClients.map(client => createToken('execute-cmd', client));
@@ -108,6 +107,7 @@
         this.$electron.ipcRenderer.send('devices:execute-cmd', this.execCwd, this.execCmd, tokens);
       },
       forkProcess() {
+        this.saveCommands();
         const connectedClients = this.$store.getters['clients/connected'];
 
         const tokens = connectedClients.map(client => createToken('fork-process', client));
@@ -116,6 +116,7 @@
         this.$electron.ipcRenderer.send('devices:fork-process', this.processCwd, this.processCmd, tokens);
       },
       killProcess() {
+        this.saveCommands();
         const connectedClients = this.$store.getters['clients/connected'];
 
         const tokens = connectedClients.map(client => createToken('fork-process', client));
@@ -124,6 +125,7 @@
         this.$electron.ipcRenderer.send('devices:kill-process', tokens);
       },
       syncDirectory() {
+        this.saveCommands();
         const connectedClients = this.$store.getters['clients/connected'];
 
         const tokens = connectedClients.map(client => createToken('sync-directory', client));
@@ -132,6 +134,7 @@
         this.$electron.ipcRenderer.send('devices:sync-directory', this.syncLocal, this.syncRemote, tokens);
       },
       startWatchingDirectory() {
+        this.saveCommands();
         const connectedClients = this.$store.getters['clients/connected'];
 
         const tokens = connectedClients.map(client => createToken('watch-directory', client));
@@ -140,8 +143,22 @@
         this.$electron.ipcRenderer.send('devices:start-watching-directory', this.syncLocal, this.syncRemote, tokens);
       },
       stopWatchingDirectory() {
+        this.saveCommands();
         this.$electron.ipcRenderer.send('devices:stop-watching-directory');
       },
+
+      saveCommands() {
+        const values = {
+          execCwd: this.execCwd,
+          execCmd: this.execCmd,
+          processCwd: this.processCwd,
+          processCmd: this.processCmd,
+          syncLocal: this.syncLocal,
+          syncRemote: this.syncRemote,
+        };
+
+        this.$store.dispatch('commands/update', values);
+      }
     }
   };
 </script>

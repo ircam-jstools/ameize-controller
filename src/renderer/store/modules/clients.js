@@ -6,7 +6,7 @@ const state = {
 
 const mutations = {
   ADD_CLIENT(state, client) {
-    // @todo - should work with a more secure key such has mac address or something
+    // id is the hostname, that has to be unique anyway
     const id = client.id;
     const targetClient = state.clients.find(client => client.id === id);
 
@@ -18,11 +18,23 @@ const mutations = {
     }
   },
   REMOVE_CLIENT(state, client) {
-    // @todo - should work with a more secure key such has mac address or something
+    // id is the hostname, that has to be unique anyway
     const id = client.id;
     const targetClient = state.clients.find(client => client.id === id);
 
     if (targetClient) {
+      // remove all tokens related to the client
+      // @todo - needs to be tested properly
+      for (let index = state.tokens.length - 1; index >= 0; index--) {
+        const token = state.tokens[index];
+
+        if (token.client.id === targetClient.id) {
+          state.tokens.splice(index, 1);
+        }
+      }
+
+      // but keep its logs has it might be usefull
+      // and tag as disconnected
       targetClient.connected = false;
     }
   },

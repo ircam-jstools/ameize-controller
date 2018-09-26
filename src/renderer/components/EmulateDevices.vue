@@ -14,7 +14,7 @@
     </label>
     <label>
       <span>command</span>
-      <input type="text" v-model="cmdLine" id="cmdLine" />
+      <input type="text" v-model="applicationCmd" id="applicationCmd" />
     </label>
 
     <p>> status: {{ this.status }}</p>
@@ -36,8 +36,8 @@
         showSystemInformation: false,
         // move this to global state
         numInstances: 1,
-        applicationPath: '/Users/matuszewski/dev/pi/ameize-managment/client',
-        cmdLine: './dist/index.js start --debug',
+        applicationPath: this.$store.getters['commands/applicationPath'],
+        applicationCmd: this.$store.getters['commands/applicationCmd'],
         errors: [],
         status: 'idle', // started, stopped
       };
@@ -47,10 +47,19 @@
         this.errors = [];
         this.$store.dispatch('clients/clearLogs');
 
-        this.$electron.ipcRenderer.send('start-local:request', this.applicationPath, this.cmdLine, this.numInstances);
+        this.$electron.ipcRenderer.send('start-local:request', this.applicationPath, this.applicationCmd, this.numInstances);
       },
       stop() {
         this.$electron.ipcRenderer.send('stop-local:request');
+      },
+
+      saveCommands() {
+        const values = {
+          applicationPath: this.applicationPath,
+          applicationCmd: this.applicationCmd,
+        };
+
+        this.$store.dispatch('commands/update', values);
       },
     },
 
