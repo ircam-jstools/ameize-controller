@@ -12,6 +12,8 @@
       </label>
     </div>
 
+    <div class="regexp-filter">Regexp filter: <input type="text" v-model="regexpFilter" v-on:input="regexpFilterUpdate"></div>
+
     <div class="log-control">Font size:
       <button class="log-size" @click="logFontSizeGrow">+</button>
       <button class="log-size" @click="logFontSizeShrink">-</button>
@@ -26,6 +28,7 @@ export default {
   name: 'console',
   data: function() {
     return {
+      regexpFilter: '',
       filters: [],
       logs: this.$store.getters['clients/logs'],
     };
@@ -51,23 +54,29 @@ export default {
       return logFilters;
     },
     logStr() {
+      const regexpFilter = (this.regexpFilter === '' ? '.*' : this.regexpFilter);
+      const regexp = new RegExp(regexpFilter, 'i'); // case-insensitive
+
       return this.$store.getters['clients/logs']
         .filter(log => this.filters.indexOf(log.id) === -1)
         .map(log => `[${log.id}]\t${log.msg}`)
-        .join('');
+        .join('')
+        .split('\n')
+        .filter(log => regexp.test(log))
+        .join('\n');
     },
   },
 
   mounted() {
-    this._updateSize();
+    this._updateLogsDisplay();
   },
 
   updated() {
-    this._updateSize();
+    this._updateLogsDisplay();
   },
 
   methods: {
-    _updateSize() {
+    _updateLogsDisplay() {
       // @todo - rename elements classes
 
       const windowSize = this.$store.getters['app/getComponentSize']('window');
@@ -114,7 +123,7 @@ export default {
         key: 'logsFontSize',
         value: logsFontSize,
       });
-      this._updateSize();
+      this._updateLogsDisplay();
     },
 
     logFontSizeShrink() {
@@ -128,7 +137,11 @@ export default {
         key: 'logsFontSize',
         value: logsFontSize,
       });
-      this._updateSize();
+      this._updateLogsDisplay();
+    },
+
+    regexpFilterUpdate() {
+      this._updateLogsDisplay();
     },
   },
 };
@@ -198,6 +211,18 @@ export default {
 
   .filter-controls label span {
     color: #d9534f;
+  }
+
+  .regexp-filter {
+    display: inline-block;
+    input {
+      size: auto;
+      display: inline-block;
+    }
+  }
+
+  .log-control div {
+    display: inline-block;
   }
 
   pre.logs {
