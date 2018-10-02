@@ -12,6 +12,11 @@
       </label>
     </div>
 
+    <div class="log-control">Font size:
+      <button class="log-size" @click="logFontSizeGrow">+</button>
+      <button class="log-size" @click="logFontSizeShrink">-</button>
+    </div>
+
     <pre class="logs">{{ logStr }}</pre>
   </div>
 </template>
@@ -77,8 +82,10 @@ export default {
       const filterControlsHeight = $filterControls.getBoundingClientRect().height;
       // const logsHeight = height - filtersHeight - filterControlsHeight - 40 // 40 is padding
       const logsHeight = height - filterControlsHeight - 40 // 40 is padding
-
+      const logsFontSize = this.$store.getters['app/getGuiState']('logsFontSize');
       $logs.style.height = `${logsHeight}px`;
+      $logs.style.fontSize = `${logsFontSize}%`;
+
       $logs.scrollTop = $logs.scrollHeight;
     },
 
@@ -94,7 +101,35 @@ export default {
         if (this.filters.indexOf(id) === -1)
           this.filters.push(id);
       });
-    }
+    },
+
+    logFontSizeGrow() {
+      let logsFontSize = this.$store.getters['app/getGuiState']('logsFontSize');
+      logsFontSize *= 1.1; // grow by 10%
+      if(logsFontSize > 200) {
+        logsFontSize = 200;
+      }
+
+      this.$store.dispatch('app/setGuiState', {
+        key: 'logsFontSize',
+        value: logsFontSize,
+      });
+      this._updateSize();
+    },
+
+    logFontSizeShrink() {
+      let logsFontSize = this.$store.getters['app/getGuiState']('logsFontSize');
+      logsFontSize /= 1.1; // shrink by 10%
+      if(logsFontSize < 50) {
+        logsFontSize = 50;
+      }
+
+      this.$store.dispatch('app/setGuiState', {
+        key: 'logsFontSize',
+        value: logsFontSize,
+      });
+      this._updateSize();
+    },
   },
 };
 </script>
