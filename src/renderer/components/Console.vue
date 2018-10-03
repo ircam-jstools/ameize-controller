@@ -71,8 +71,6 @@ export default {
       return deviceFilters;
     },
     logStr() {
-      return `abc\ndef`;
-
       const regexpFilter = (this.regexpFilter === '' ? '.*' : this.regexpFilter);
       const regexp = new RegExp(regexpFilter, 'i'); // case-insensitive
 
