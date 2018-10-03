@@ -1,25 +1,34 @@
 <template>
-  <div id="console">
+  <div id="console" :style="consoleStyles">
+    <div class="resize-bar" @mousedown="resizeStart"></div>
+
     <!-- <p class="filters">filters: {{ filters }}</p> -->
     <p class="filter-all" @click="filterAll">filter all</p>
     <p class="clear-logs" @click="clearLogs">clear</p>
 
-    <div class="filter-controls">
-      <label v-for="filter of logFilters">
-        <input type="checkbox" :value="filter.id" v-model="filters">
-          {{ filter.id }}
-          <span v-if="filter.errors > 0">({{ filter.errors }})</span>
+    <div class="controls">
+      <label v-for="deviceFilter of deviceFiltersFromLogs">
+        <input type="checkbox" :value="deviceFilter.id" v-model="deviceFilters">
+          {{ deviceFilter.id }}
+          <span v-if="deviceFilter.errors > 0">({{ deviceFilter.errors }})</span>
       </label>
+
+      <div class="log-controls">
+
+        <div>
+          <span>Font size:</span>
+          <button class="btn log-size" @click="logFontSizeGrow">+</button>
+          <button class="btn log-size" @click="logFontSizeShrink">-</button>
+        </div>
+
+        <div>
+          <span>Regexp filter:</span>
+          <input type="text" v-model="regexpFilter">
+        </div>
+      </div>
     </div>
 
-    <div class="regexp-filter">Regexp filter: <input type="text" v-model="regexpFilter" v-on:input="regexpFilterUpdate"></div>
-
-    <div class="log-control">Font size:
-      <button class="log-size" @click="logFontSizeGrow">+</button>
-      <button class="log-size" @click="logFontSizeShrink">-</button>
-    </div>
-
-    <pre class="logs">{{ logStr }}</pre>
+    <pre class="logs" :style="logStyles">{{ logStr }}</pre>
   </div>
 </template>
 
@@ -28,94 +37,103 @@ export default {
   name: 'console',
   data: function() {
     return {
+      controlsHeight: 0,
+      consoleWidth: 700,
+      minConsoleWidth: 550,
+      resizeConsoleWidthStart: null,
+      resizePositionStart: null,
       regexpFilter: '',
-      filters: [],
+      deviceFilters: [],
       logs: this.$store.getters['clients/logs'],
     };
   },
   computed: {
-    logFilters() {
-      const logFilters = [];
+    consoleStyle() {
+      return `width: ${this.$store.getters['app/getComponentSize']('console')}px`;
+    },
+    deviceFiltersFromLogs() {
+      const deviceFilters = [];
 
       this.$store.getters['clients/logs'].forEach(log => {
-        let filter = logFilters.find(f => f.id === log.id);
+        let filter = deviceFilters.find(f => f.id === log.id);
 
         if (!filter) {
           filter = { id: log.id, errors: 0 };
-          logFilters.push(filter);
+          deviceFilters.push(filter);
         }
 
         if (log.type === 'error')
           filter.errors += 1;
       });
       // keep filters in the same order...
-      logFilters.sort((a, b) => a.id > b.id);
+      deviceFilters.sort((a, b) => a.id > b.id);
 
-      return logFilters;
+      return deviceFilters;
     },
     logStr() {
+      return `abc\ndef`;
+
       const regexpFilter = (this.regexpFilter === '' ? '.*' : this.regexpFilter);
       const regexp = new RegExp(regexpFilter, 'i'); // case-insensitive
 
       return this.$store.getters['clients/logs']
-        .filter(log => this.filters.indexOf(log.id) === -1)
+        .filter(log => this.deviceFilters.indexOf(log.id) === -1)
         .map(log => `[${log.id}]\t${log.msg}`)
         .join('')
         .split('\n')
         .filter(log => regexp.test(log))
         .join('\n');
     },
+    logStyles() {
+      const windowSize = this.$store.getters['app/getComponentSize']('window');
+      const menuSize = this.$store.getters['app/getComponentSize']('main-menu');
+      const logsFontSize = this.$store.getters['app/getGuiState']('logsFontSize');
+      let menuHeight = 0;
+      // menu size is defined when menu is mounted later
+      if (menuSize)
+        menuHeight = menuSize.height;
+
+      const $controls = this._$controls;
+      const contentHeight = windowSize.height - menuHeight;
+      const logsHeight = contentHeight - this.controlsHeight - 40 // 40 is padding
+
+      return `height: ${logsHeight}px; font-size: ${logsFontSize}%`;
+    },
+    consoleStyles() {
+      return `width: ${this.consoleWidth}px`;
+    }
   },
 
   mounted() {
-    this._updateLogsDisplay();
+    const $controls = this.$el.querySelector('.controls');
+    this.controlsHeight = $controls.getBoundingClientRect().height;
   },
 
   updated() {
-    this._updateLogsDisplay();
+    const $controls = this.$el.querySelector('.controls');
+    this.controlsHeight = $controls.getBoundingClientRect().height;
   },
 
   methods: {
-    _updateLogsDisplay() {
-      // @todo - rename elements classes
-
-      const windowSize = this.$store.getters['app/getComponentSize']('window');
-      const menuSize = this.$store.getters['app/getComponentSize']('main-menu');
-
-      // const $filters = this.$el.querySelector('.filters');
-      const $filterControls = this.$el.querySelector('.filter-controls');
-      const $logs = this.$el.querySelector('.logs');
-
-      const height = windowSize.height - menuSize.height;
-      // const filtersHeight = $filters.getBoundingClientRect().height;
-      const filterControlsHeight = $filterControls.getBoundingClientRect().height;
-      // const logsHeight = height - filtersHeight - filterControlsHeight - 40 // 40 is padding
-      const logsHeight = height - filterControlsHeight - 40 // 40 is padding
-      const logsFontSize = this.$store.getters['app/getGuiState']('logsFontSize');
-      $logs.style.height = `${logsHeight}px`;
-      $logs.style.fontSize = `${logsFontSize}%`;
-
-      $logs.scrollTop = $logs.scrollHeight;
-    },
-
     clearLogs() {
       this.$store.dispatch('clients/clearLogs');
-      this.filters.length = 0;
+      this.deviceFilters.length = 0;
     },
 
     filterAll() {
-      const ids = this.logFilters.map(filter => filter.id);
+      const ids = this.deviceFiltersFromLogs.map(filter => filter.id);
 
       ids.forEach(id => {
-        if (this.filters.indexOf(id) === -1)
-          this.filters.push(id);
+        if (this.deviceFilters.indexOf(id) === -1)
+          this.deviceFilters.push(id);
       });
     },
 
     logFontSizeGrow() {
       let logsFontSize = this.$store.getters['app/getGuiState']('logsFontSize');
       logsFontSize *= 1.1; // grow by 10%
-      if(logsFontSize > 200) {
+
+      if (logsFontSize > 200) {
         logsFontSize = 200;
       }
 
@@ -123,13 +141,13 @@ export default {
         key: 'logsFontSize',
         value: logsFontSize,
       });
-      this._updateLogsDisplay();
     },
 
     logFontSizeShrink() {
       let logsFontSize = this.$store.getters['app/getGuiState']('logsFontSize');
       logsFontSize /= 1.1; // shrink by 10%
-      if(logsFontSize < 50) {
+
+      if (logsFontSize < 50) {
         logsFontSize = 50;
       }
 
@@ -137,12 +155,37 @@ export default {
         key: 'logsFontSize',
         value: logsFontSize,
       });
-      this._updateLogsDisplay();
     },
 
-    regexpFilterUpdate() {
-      this._updateLogsDisplay();
+    resizeStart(e) {
+      e.preventDefault();
+
+      this.resizePositionStart = e.clientX;
+      this.resizeConsoleWidthStart = this.consoleWidth;
+
+      window.addEventListener('mousemove', this.resize);
+      window.addEventListener('mouseup', this.resizeStop);
     },
+
+    resizeStop(e) {
+      e.preventDefault();
+
+      window.removeEventListener('mousemove', this.resize);
+      window.removeEventListener('mouseup', this.resizeStop);
+
+      this.resizePositionStart = null;
+      this.resizeConsoleWidthStart = null;
+    },
+
+    resize(e) {
+      e.preventDefault();
+
+      const currentPosition = e.clientX;
+      const dx = this.resizePositionStart - currentPosition;
+
+      this.consoleWidth = Math.max(this.minConsoleWidth, this.resizeConsoleWidthStart + dx);
+    }
+
   },
 };
 </script>
@@ -152,12 +195,21 @@ export default {
     position: absolute;
     top: 0;
     right: 0;
-    width: 48%;
     background-color: #efefef;
-    border-left: 1px solid #ababab;
+    /*border-left: 1px solid #ababab;*/
     padding: 20px;
     box-sizing: border-box;
     font-size: 1.2rem;
+  }
+
+  .resize-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 2px;
+    height: 100%;
+    background-color: #ababab;
+    cursor: col-resize;
   }
 
   .clear-logs {
@@ -186,22 +238,16 @@ export default {
     margin: 0;
   }
 
-  /* .filters {
-    margin-right: 130px;
-    padding-right: 20px;
-    border-right: 1px solid #cdcdcd;
-  } */
-
-  .filter-controls {
+  .controls {
     padding-top: 24px;
     padding-bottom: 8px;
   }
 
-  .filter-controls input[type=checkbox] {
+  .controls input[type=checkbox] {
     margin-right: 6px;
   }
 
-  .filter-controls label {
+  .controls label {
     width: 25%;
     display: inline-block;
     overflow: hidden;
@@ -209,20 +255,35 @@ export default {
     margin-bottom: 0px;
   }
 
-  .filter-controls label span {
+  .controls label span {
     color: #d9534f;
   }
 
-  .regexp-filter {
-    display: inline-block;
-    input {
-      size: auto;
-      display: inline-block;
-    }
+  .log-controls {
+    margin-top: 12px;
+    height: 20px;
+    display: flex;
+    justify-content: space-between;
   }
 
-  .log-control div {
+  .log-controls > div:first-child {
+    padding-right: 20px;
+  }
+
+  .log-controls > div {
     display: inline-block;
+  }
+
+  .log-controls input {
+    display: inline;
+    width: 250px;
+  }
+
+  .log-controls .btn.log-size {
+    width: 20px;
+    height: 20px;
+    font-size: 16px;
+    line-height: 20px;
   }
 
   pre.logs {

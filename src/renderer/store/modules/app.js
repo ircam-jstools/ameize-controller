@@ -2,7 +2,7 @@ const state = {
   components: {},
   guiState: {
     showConsole: true,
-    logsFontSize: 100, // %
+    logsFontSize: 100,
   },
 };
 
@@ -12,7 +12,6 @@ const mutations = {
     state.components[payload.id] = { width, height };
   },
   SET_GUI_STATE(state, payload) {
-
     const { key, value } = payload;
     state.guiState[key] = value;
 
