@@ -44,12 +44,14 @@
     },
     methods: {
       start() {
+        this.saveCommands();
         this.errors = [];
         this.$store.dispatch('clients/clearLogs');
 
         this.$electron.ipcRenderer.send('start-local:request', this.applicationPath, this.applicationCmd, this.numInstances);
       },
       stop() {
+        this.saveCommands();
         this.$electron.ipcRenderer.send('stop-local:request');
       },
 

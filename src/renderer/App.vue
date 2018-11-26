@@ -85,7 +85,7 @@
   #app {
     box-sizing: border-box;
     margin: 0;
-    font-family: consolas;
+    font-family: consolas, monospace;
     font-size: 1.4rem;
     height: 100vh;
     width: 100vw;
@@ -111,7 +111,7 @@
     padding: 4px 5px 2px 5px;
     border-radius: 2px;
     border: 1px solid #cdcdcd;
-    font-family: consolas;
+    font-family: consolas, monospace;
     font-size: 1.2rem;
   }
 
@@ -127,7 +127,7 @@
     border-radius: 2px;
     border: none;
     color: white;
-    font-family: consolas;
+    font-family: consolas, monospace;
     font-size: 1.4rem;
   }
 

@@ -65,7 +65,7 @@ export default {
         if (log.type === 'error')
           filter.errors += 1;
       });
-      // keep filters in the same order...
+      // keep devices in the same order...
       deviceFilters.sort((a, b) => a.id > b.id);
 
       return deviceFilters;

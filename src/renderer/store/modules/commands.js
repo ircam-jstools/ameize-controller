@@ -45,7 +45,7 @@ const mutations = {
       }
     }
 
-    fs.writeFileSync(db, JSON.stringify(state));
+    fs.writeFileSync(db, JSON.stringify(state, null, 2));
   },
 };
 

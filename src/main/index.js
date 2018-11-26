@@ -24,7 +24,7 @@ const discoveryServer = new DiscoveryServer({ verbose: false });
 function monitorClients(mainWindow) {
   discoveryServer.addListener('connection', (client, clients) => {
     client.id = client.payload.hostname;
-    console.log('connected')
+    console.log('connected', client);
     mainWindow.webContents.send('client:connect', client);
   });
 
