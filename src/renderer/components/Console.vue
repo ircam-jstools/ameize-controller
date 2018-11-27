@@ -48,9 +48,6 @@ export default {
     };
   },
   computed: {
-    consoleStyle() {
-      return `width: ${this.$store.getters['app/getComponentSize']('console')}px`;
-    },
     deviceFiltersFromLogs() {
       const deviceFilters = [];
 
@@ -91,7 +88,6 @@ export default {
       if (menuSize)
         menuHeight = menuSize.height;
 
-      const $controls = this._$controls;
       const contentHeight = windowSize.height - menuHeight;
       const logsHeight = contentHeight - this.controlsHeight - 40 // 40 is padding
 

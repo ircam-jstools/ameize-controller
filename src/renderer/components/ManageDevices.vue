@@ -1,51 +1,55 @@
 <template>
   <div id="manage-devices">
-    <h1>Manage Devices</h1>
+    <div class="commands">
+      <h1>Manage Devices</h1>
 
-    <h3>Execute Command</h3>
-    <label>
-      <span>cmd</span>
-      <input type="text" v-model="execCmd" @blur="saveCommands" />
-    </label>
-    <label>
-      <span>cwd</span>
-      <input type="text" v-model="execCwd" @blur="saveCommands" />
-    </label>
-    <button class="btn" @click="executeCmd">execute</button>
+      <h3>Execute Command</h3>
+      <label>
+        <span>cmd</span>
+        <input type="text" v-model="execCmd" @blur="saveCommands" />
+      </label>
+      <label>
+        <span>cwd</span>
+        <input type="text" v-model="execCwd" @blur="saveCommands" />
+      </label>
+      <button class="btn" @click="executeCmd">execute</button>
 
-    <h3>Fork Process</h3>
-    <label>
-      <span>cwd</span>
-      <input type="text" v-model="processCwd" @blur="saveCommands" />
-    </label>
-    <label>
-      <span>cmd</span>
-      <input type="text" v-model="processCmd" @blur="saveCommands" />
-    </label>
-    <button class="btn blue" v-if="!processForked" @click="forkProcess">fork</button>
-    <button class="btn red" v-if="processForked" @click="killProcess">kill</button>
+      <h3>Fork Process</h3>
+      <label>
+        <span>cwd</span>
+        <input type="text" v-model="processCwd" @blur="saveCommands" />
+      </label>
+      <label>
+        <span>cmd</span>
+        <input type="text" v-model="processCmd" @blur="saveCommands" />
+      </label>
+      <button class="btn blue" v-if="!processForked" @click="forkProcess">fork</button>
+      <button class="btn red" v-if="processForked" @click="killProcess">kill</button>
 
-    <h3>Sync Directory</h3>
+      <h3>Sync Directory</h3>
 
-    <label>
-      <span>local</span>
-      <input type="text" v-model="syncLocal" />
-    </label>
-    <label>
-      <span>remote<br />(/home/pi/apps)</span>
-      <input type="text" v-model="syncRemote" @blur="saveCommands" />
-    </label>
-    <button class="btn" @click="syncDirectory">sync</button>
-    <button class="btn blue" v-if="!directoryWatched" @click="startWatchingDirectory">watch</button>
-    <button class="btn red" v-if="directoryWatched" @click="stopWatchingDirectory">stop</button>
+      <label>
+        <span>local</span>
+        <input type="text" v-model="syncLocal" />
+      </label>
+      <label>
+        <span>remote<br />(/home/pi/apps)</span>
+        <input type="text" v-model="syncRemote" @blur="saveCommands" />
+      </label>
+      <button class="btn" @click="syncDirectory">sync</button>
+      <button class="btn blue" v-if="!directoryWatched" @click="startWatchingDirectory">watch</button>
+      <button class="btn red" v-if="directoryWatched" @click="stopWatchingDirectory">stop</button>
+    </div>
 
-    <h3>client list</h3>
-    <ul id="client-list">
-      <li class="client" v-for="client in clients">
-        <div class="connection" v-bind:class="{ active : client.connected }">&nbsp;</div>
-        <p>{{ client.hostname }} ({{ client.address }}:{{ client.port }})</p>
-      </li>
-    </ul>
+    <div class="client-list" :style="clientListStyles">
+      <h3>client list</h3>
+      <ul>
+        <li class="client" v-for="client in clients">
+          <div class="connection" v-bind:class="{ active : client.connected }">&nbsp;</div>
+          <p>{{ client.hostname }} ({{ client.address }}:{{ client.port }})</p>
+        </li>
+      </ul>
+    </div>
 
     <!-- for debug or later gui improvements -->
     <!-- <pre>{{ tokens }}</pre> -->
@@ -78,6 +82,9 @@
 
         clients: this.$store.getters['clients/all'],
         tokens: this.$store.getters['clients/tokens'],
+
+        commandsHeight: 0,
+        containerHeight: 0,
       };
     },
 
@@ -94,6 +101,30 @@
 
         return !!t;
       },
+      clientListStyles() {
+        const windowSize = this.$store.getters['app/getComponentSize']('window');
+        const menuSize = this.$store.getters['app/getComponentSize']('main-menu');
+        let menuHeight = 0;
+        // menu size is defined when menu is mounted later
+        if (menuSize)
+          menuHeight = menuSize.height;
+
+        const clientListHeight = windowSize.height - menuHeight - this.commandsHeight;
+        console.log(clientListHeight, `height: $(clientListHeight}px;`);
+
+        return `height: ${clientListHeight}px;`;
+      }
+    },
+
+    mounted() {
+      const $commands = this.$el.querySelector('.commands');
+      this.commandsHeight = $commands.getBoundingClientRect().height;
+      console.log(this.$commandsHeight);
+    },
+
+    updated() {
+      const $commands = this.$el.querySelector('.commands');
+      this.commandsHeight = $commands.getBoundingClientRect().height;
     },
 
     methods: {

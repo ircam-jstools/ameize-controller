@@ -77,6 +77,9 @@ app.on('activate', () => {
 
 app.on('will-quit', () => {
   console.log('quitting app...', process.pid);
+  discoveryServer.stop();
+  tcpServer.close();
+
   terminate(process.pid);
 });
 
