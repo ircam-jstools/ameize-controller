@@ -21,16 +21,16 @@ function logStats(proc, data) {
 
   log += chalk.yellow(`${proc} Process\n`)
 
-  if (typeof data === 'object') {
-    data.toString({
-      colors: true,
-      chunks: false
-    }).split(/\r?\n/).forEach(line => {
-      log += '  ' + line + '\n'
-    })
-  } else {
-    log += `  ${data}\n`
-  }
+  // if (typeof data === 'object') {
+  //   data.toString({
+  //     colors: true,
+  //     chunks: false
+  //   }).split(/\r?\n/).forEach(line => {
+  //     log += '  ' + line + '\n'
+  //   })
+  // } else {
+  //   log += `  ${data}\n`
+  // }
 
   console.log(log);
 }

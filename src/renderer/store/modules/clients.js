@@ -6,9 +6,9 @@ const state = {
 
 const mutations = {
   ADD_CLIENT(state, client) {
-    // id is the hostname, that has to be unique anyway
-    const id = client.id;
-    const targetClient = state.clients.find(client => client.id === id);
+    const hostname = client.hostname;
+    console.log(hostname)
+    const targetClient = state.clients.find(client => client.hostname === hostname);
 
     if (targetClient) {
       targetClient.connected = true;
@@ -18,26 +18,25 @@ const mutations = {
     }
   },
   REMOVE_CLIENT(state, client) {
-    // id is the hostname, that has to be unique anyway
-    const id = client.id;
-    const targetClient = state.clients.find(client => client.id === id);
+    const hostname = client.hostname;
+    const targetClient = state.clients.find(client => client.hostname === hostname);
 
     if (targetClient) {
       // remove all tokens related to the client
-      // @todo - needs to be tested properly
       for (let index = state.tokens.length - 1; index >= 0; index--) {
         const token = state.tokens[index];
 
-        if (token.client.id === targetClient.id) {
+        if (token.client.hostname === targetClient.hostname) {
           state.tokens.splice(index, 1);
         }
       }
 
-      // but keep its logs has it might be usefull
-      // and tag as disconnected
+      // but keep its logs (has it might be usefull) and tag as disconnected
       targetClient.connected = false;
     }
   },
+  // @todo implement when we are sure that we want to delete everything related
+  // to a particular client
   // DELETE_CLIENT(client) {},
 
   CREATE_LOG(state, log) {
@@ -51,6 +50,7 @@ const mutations = {
     state.logs = [];
   },
 
+  // review all tokens behavior
   ADD_TOKENS(state, tokens) {
     state.tokens = state.tokens.concat(tokens);
   },
@@ -84,9 +84,11 @@ const actions = {
   addTokens({ commit }, tokens) {
     commit('ADD_TOKENS', tokens);
   },
+
   clearToken({ commit }, tokenUuid) {
     commit('CLEAR_TOKEN', tokenUuid);
   },
+
   setTokenStatus({ commit }, payload) {
     commit('SET_TOKEN_STATUS', payload);
   },
@@ -97,19 +99,10 @@ const getters = {
     return state.clients;
   },
   connected(state) {
-    return state.clients.filter(client => client.connected === true);
+    const connected = state.clients.filter(client => client.connected === true);
+    console.log(connected)
+    return connected;
   },
-  idByRinfo: (state) => (rinfo) => {
-    const client = state.clients.find(c => {
-      return c.rinfo.port === rinfo.port && c.rinfo.address === rinfo.address;
-    });
-
-    if (client)
-      return client.id;
-    else
-      return null;
-  },
-
   logs(state) {
     return state.logs;
   },

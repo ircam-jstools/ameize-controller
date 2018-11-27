@@ -40,7 +40,7 @@ if (fs.existsSync(db)) {
 const mutations = {
   UPDATE(state, values) {
     for (let name in values) {
-      if (state[name]) {
+      if (name in state) {
         state[name] = values[name];
       }
     }

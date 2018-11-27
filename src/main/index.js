@@ -4,6 +4,7 @@ import { DiscoveryServer } from '@ircam/node-discovery';
 
 import emulateDevices from './controllers/emulate-devices';
 import manageDevices from './controllers/manage-devices';
+import net from 'net';
 
 /**
  * Set `__static` path to static files in production
@@ -19,62 +20,63 @@ const winURL = process.env.NODE_ENV === 'development'
   : `file://${__dirname}/index.html`;
 
 
+// instanciate discovery server
+const TCP_PORT = 8091;
 const discoveryServer = new DiscoveryServer({ verbose: false });
+const tcpServer = net.createServer().on('error', err => console.error(err.stack));
 
-function monitorClients(mainWindow) {
-  discoveryServer.addListener('connection', (client, clients) => {
-    client.id = client.payload.hostname;
-    console.log('connected', client);
-    mainWindow.webContents.send('client:connect', client);
+// start servers once everything ready
+function startServers(mainWindow) {
+  tcpServer.listen(TCP_PORT, () => {
+    discoveryServer.start();
+    console.log('> Discovery server started');
+    console.log('> TCP server started', tcpServer.address());
   });
-
-  discoveryServer.addListener('close', (client, clients) => {
-    client.id = client.payload.hostname;
-    console.log('disconnected')
-    mainWindow.webContents.send('client:disconnect', client);
-  });
-
-  discoveryServer.start();
 }
 
 
-
 function createWindow() {
-  /**
-   * Initial window options
-   */
-  mainWindow = new BrowserWindow({
-    useContentSize: true,
-  });
-
+  // Initial window options
+  mainWindow = new BrowserWindow({ useContentSize: true });
   mainWindow.maximize();
   mainWindow.loadURL(winURL);
 
   mainWindow.on('closed', () => {
+    app.quit();
     mainWindow = null;
   });
 
-  monitorClients(mainWindow);
+  mainWindow.once('show', () => {
+    console.log('> Window show');
+    // everything ready on the windows side, start the servers
+    // @note - looks still not completely reliable when the app chashed...
+    // @note - poorman fix, sometime the socket seems properly opened but but
+    // broadcasted to the main window
+    setTimeout(() => {
+      startServers();
+    }, 2000);
+  });
+
+  // init services
   emulateDevices.initialize();
-  manageDevices.initialize(mainWindow, discoveryServer);
+  manageDevices.initialize(mainWindow, tcpServer);
 }
 
 app.on('ready', createWindow);
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  // if (process.platform !== 'darwin') app.quit();
+  app.quit();
 });
 
 app.on('activate', () => {
-  if (mainWindow === null)
+  if (mainWindow === null) {
     createWindow();
+  }
 });
 
 app.on('will-quit', () => {
-  console.log('quitting app...');
-  discoveryServer.stop();
+  console.log('quitting app...', process.pid);
   terminate(process.pid);
 });
 
@@ -96,4 +98,4 @@ autoUpdater.on('update-downloaded', () => {
 app.on('ready', () => {
   if (process.env.NODE_ENV === 'production') autoUpdater.checkForUpdates()
 })
- */
+*/

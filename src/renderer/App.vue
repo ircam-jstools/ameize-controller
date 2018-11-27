@@ -20,28 +20,22 @@
     },
 
     created: function() {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
-      this.$store.dispatch('app/setComponentSize', { id: 'window', width, height });
+      this.$store.dispatch('app/setComponentSize', { id: 'window', width: window.innerWidth, height: window.innerHeight });
       // handle clients connections
-      this.$electron.ipcRenderer.on('client:connect', (event, client, clients) => {
-        this.$store.dispatch('clients/add', client);
-      });
-      this.$electron.ipcRenderer.on('client:disconnect', (event, client, clients) => {
-        this.$store.dispatch('clients/remove', client);
+      this.$electron.ipcRenderer.on('client:connect', (event, clientInfos) => {
+        this.$store.dispatch('clients/add', clientInfos);
       });
 
-
-      this.$electron.ipcRenderer.on('device:stdout', (event, rinfo, msg) => {
-        // handle regular applications and ameize-clients
-        const id = this.$store.getters['clients/idByRinfo'](rinfo) || rinfo;
-        this.$store.dispatch('clients/createLog', { id, msg, type: 'log' });
+      this.$electron.ipcRenderer.on('client:disconnect', (event, clientInfos) => {
+        this.$store.dispatch('clients/remove', clientInfos);
       });
 
-      this.$electron.ipcRenderer.on('device:stderr', (event, rinfo, msg) => {
-        // handle regular applications and ameize-clients
-        const id = this.$store.getters['clients/idByRinfo'](rinfo) || rinfo;
-        this.$store.dispatch('clients/createLog', { id, msg, type: 'error' });
+      this.$electron.ipcRenderer.on('device:stdout', (event, clientInfos, msg) => {
+        this.$store.dispatch('clients/createLog', { id: clientInfos.hostname, msg, type: 'log' });
+      });
+
+      this.$electron.ipcRenderer.on('device:stderr', (event, clientInfos, msg) => {
+        this.$store.dispatch('clients/createLog', { id: clientInfos.hostname, msg, type: 'error' });
       });
 
       // this.$electron.ipcRenderer.on('device:close', (event, instanceIndex, code, signal) => {

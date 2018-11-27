@@ -2,14 +2,17 @@ import { ipcMain } from 'electron';
 import { exec, execSync } from 'child_process';
 import watch from 'watch';
 import debounce from 'lodash.debounce';
+import split from 'split';
 
-const USER_NAME = 'pi';
+const clientInfosMap = new Map();
+const hostnameClientMap = new Map();
+
+const MSG_DELIMITER = 'AMEIZE_MSG_DELIMITER_$352NS0lAZL&';
 
 const manageDevices = {
-  // reuse udpServer connection from discoveryServer to send commands to clients
-  initialize(mainWindow, udpServer) {
+  initialize(mainWindow, tcpServer) {
     this.mainWindow = mainWindow;
-    this.udpServer = udpServer;
+    this.tcpServer = tcpServer;
 
     this.watchInfos = {
       monitor: null,
@@ -31,49 +34,80 @@ const manageDevices = {
     ipcMain.on('devices:start-watching-directory', this.startWatchingDirectory);
     ipcMain.on('devices:stop-watching-directory', this.stopWatchingDirectory);
 
-    // receive only message that do not match the discovery protocol
-    this.udpServer.addListener('message', this.dispatch);
+    // handle communications with remote clients
+    this.tcpServer.on('connection', (client) => {
+      client.pipe(split(MSG_DELIMITER, null, { trailing: false })).on('data', data => {
+        if (data) {
+          // console.log(`"--------------------------------------"`);
+          // console.log(`"${data}"`);
+          // console.log(`"--------------------------------------"`);
+          let type;
+          let payload;
+
+          try {
+            const json = JSON.parse(data);
+            type = json.type;
+            payload = json.payload;
+          } catch(err) {
+            console.log(err);
+            console.log(data.toString());
+            return;
+          }
+
+          if (type === 'HANDSHAKE') {
+            const infos = client.address();
+            infos.hostname = payload.hostname;
+
+            clientInfosMap.set(client, infos);
+            hostnameClientMap.set(infos.hostname, client);
+
+            mainWindow.webContents.send('client:connect', infos);
+          } else {
+            this.dispatch(client, type, payload);
+          }
+        }
+      });
+
+      // delete client and notify main window
+      client.on('end', () => {
+        const infos = clientInfosMap.get(client);
+        mainWindow.webContents.send('client:disconnect', infos);
+
+        clientInfosMap.delete(client);
+        hostnameClientMap.delete(infos.hostname);
+      });
+    });
+
   },
 
-  dispatch(buffer, rinfo) {
-    const msg = buffer.toString().split(' ');
-    const protocol = msg.shift();
+  dispatch(client, type, payload) {
+    const infos = clientInfosMap.get(client);
 
-    switch (protocol) {
+    switch (type) {
       // console stuff
       case 'STDOUT': {
-        const log = msg.join(' ');
-
-        if (log.trim() !== '')
-          this.mainWindow.webContents.send('device:stdout', rinfo, log);
-
+        const { msg } = payload;
+        this.mainWindow.webContents.send('device:stdout', infos, msg);
         break;
       }
       case 'STDERR': {
-        const log = msg.join(' ');
-
-        if (log.trim() !== '')
-          this.mainWindow.webContents.send('device:stderr', rinfo, log);
-
+        const { msg } = payload;
+        this.mainWindow.webContents.send('device:stderr', infos, msg);
         break;
       }
-
       // commands
       case 'EXEC_ACK': {
-        const tokenUuid = msg.shift();
+        const { tokenUuid } = payload;
         this.mainWindow.webContents.send('device:clear-token', tokenUuid);
         break;
       }
       case 'FORK_ACK': {
-        const forkTokenUuid = msg.shift();
-
+        const { forkTokenUuid } = payload;
         this.mainWindow.webContents.send('device:set-token-status', forkTokenUuid, 'running');
         break;
       }
       case 'KILL_ACK': {
-        const killTokenUuid = msg.shift();
-        const forkTokenUuid = msg.shift();
-
+        const { killTokenUuid, forkTokenUuid } = payload;
         this.mainWindow.webContents.send('device:clear-token', killTokenUuid);
         this.mainWindow.webContents.send('device:clear-token', forkTokenUuid);
         break;
@@ -82,18 +116,22 @@ const manageDevices = {
 
   },
 
-  sendLog(type, log) {
-    this.mainWindow.webContents.send('device:log', type, log);
-  },
-
   executeCmd(event, cwd, cmd, tokens) {
+    // @note - review that, probably does not work
     cwd = cwd.trim() === '' ? '~/' : cwd; // default to user $HOME
 
     tokens.forEach(token => {
-      const { port, address } = token.client.rinfo;
-      const msg = `EXEC ${token.uuid} ${cwd} ${cmd}`;
+      const client = hostnameClientMap.get(token.client.hostname);
+      const req = {
+        type: 'EXEC',
+        payload: {
+          cwd: cwd,
+          cmd: cmd,
+          tokenUuid: token.uuid,
+        },
+      };
 
-      this.udpServer.send(msg, port, address);
+      client.write(JSON.stringify(req) + MSG_DELIMITER);
     });
   },
 
@@ -101,19 +139,31 @@ const manageDevices = {
     cwd = cwd.trim() === '' ? '~/' : cwd; // default to user $HOME
 
     tokens.forEach(token => {
-      const { port, address } = token.client.rinfo;
-      const msg = `FORK ${token.uuid} ${cwd} ${cmd}`;
+      const client = hostnameClientMap.get(token.client.hostname);
+      const req = {
+        type: 'FORK',
+        payload: {
+          cwd: cwd,
+          cmd: cmd,
+          tokenUuid: token.uuid,
+        },
+      };
 
-      this.udpServer.send(msg, port, address);
+      client.write(JSON.stringify(req) + MSG_DELIMITER);
     });
   },
 
   killProcess(event, tokens) {
     tokens.forEach(token => {
-      const { port, address } = token.client.rinfo;
-      const msg = `KILL ${token.uuid}`;
+      const client = hostnameClientMap.get(token.client.hostname);
+      const req = {
+        type: 'KILL',
+        payload: {
+          tokenUuid: token.uuid,
+        },
+      };
 
-      this.udpServer.send(msg, port, address);
+      client.write(JSON.stringify(req) + MSG_DELIMITER);
     });
   },
 
@@ -147,6 +197,7 @@ const manageDevices = {
     });
   },
 
+  // token system is absurd here
   startWatchingDirectory(event, localDirectory, remoteDirectory, tokens) {
     const watchOptions = {
       ignoreDotFiles: true,

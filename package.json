@@ -52,6 +52,7 @@
   "dependencies": {
     "@ircam/node-discovery": "^1.1.1",
     "lodash.debounce": "^4.0.8",
+    "split": "^1.0.1",
     "terminate": "^2.1.0",
     "uuid": "^3.3.2",
     "vue": "^2.3.3",

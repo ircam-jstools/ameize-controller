@@ -43,7 +43,7 @@
     <ul id="client-list">
       <li class="client" v-for="client in clients">
         <div class="connection" v-bind:class="{ active : client.connected }">&nbsp;</div>
-        <p>{{ client.payload.hostname }} ({{ client.rinfo.address }}:{{ client.rinfo.port }})</p>
+        <p>{{ client.hostname }} ({{ client.address }}:{{ client.port }})</p>
       </li>
     </ul>
 
@@ -99,13 +99,15 @@
     methods: {
       executeCmd() {
         this.saveCommands();
+
         const connectedClients = this.$store.getters['clients/connected'];
-        // const tokens = this.$store.dispatch('clients/create')
+
         const tokens = connectedClients.map(client => createToken('execute-cmd', client));
         this.$store.dispatch('clients/addTokens', tokens);
 
         this.$electron.ipcRenderer.send('devices:execute-cmd', this.execCwd, this.execCmd, tokens);
       },
+
       forkProcess() {
         this.saveCommands();
         const connectedClients = this.$store.getters['clients/connected'];
@@ -113,6 +115,7 @@
         const tokens = connectedClients.map(client => createToken('fork-process', client));
         this.$store.dispatch('clients/addTokens', tokens);
 
+        console.log(tokens);
         this.$electron.ipcRenderer.send('devices:fork-process', this.processCwd, this.processCmd, tokens);
       },
       killProcess() {

@@ -76,7 +76,7 @@ export default {
 
       return this.$store.getters['clients/logs']
         .filter(log => this.deviceFilters.indexOf(log.id) === -1)
-        .map(log => `[${log.id}]\t${log.msg}`)
+        .map(log => `[${log.id}]\t${log.msg}\n`)
         .join('')
         .split('\n')
         .filter(log => regexp.test(log))
