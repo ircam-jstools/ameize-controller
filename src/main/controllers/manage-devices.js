@@ -170,26 +170,33 @@ const manageDevices = {
   // @todo - use tokens to retrieve feedback to the front-end
   syncDirectory(event, localDirectory, remoteDirectory, tokens, clearTokens = true) {
     tokens.forEach(token => {
-      const { hostname } = token.client.payload;
-      let cmd = '';
+      const { hostname } = token.client;
 
-      if (/debug/.test(hostname)) { // we are in debug mode
-        cmd = `rsync --archive --exclude="node_modules" --delete-after ${localDirectory}/ ${remoteDirectory}`;
+      let destinationDirectory = '';
+      // we are in debug mode with locally emulated devices
+      if (/debug/.test(hostname)) {
+        destinationDirectory = remoteDirectory;
       } else {
-        // rsync -e ssh -avz --delete-after "/home/source\ avec\ espace/" user@ip_du_serveur:"/dossier/destination\ avec\ espace/"
-        cmd = `rsync --archive --exclude="node_modules" --delete-after ${localDirectory}/ pi@${hostname}.local:${remoteDirectory}`;
+        destinationDirectory = `pi@${hostname}.local:${remoteDirectory}`;
       }
 
-      exec(cmd, (err, stdout, stderr) => {
-        if (err)
-          return console.error(err);
+      const cmd = `rsync --rsync-path='mkdir -p "${remoteDirectory}" && rsync'`
+            + ` --archive --exclude="node_modules" --delete-after`
+            + ` "${localDirectory}/" "${destinationDirectory}"`;
 
-        console.log(stdout.toString());
-        console.log(stderr.toString());
+      console.log('cmd: ', cmd);
+
+      exec(cmd, (err, stdout, stderr) => {
+        if (err) {
+          return console.error('Error: ', err);
+        }
+
+        console.log('stdout: ', stdout.toString());
+        console.log('stderr; ', stderr.toString());
 
         // token has { address, port } has rinfo does
         const msg = `"${remoteDirectory}" successfully synchronized\n`;
-        this.mainWindow.webContents.send('device:stdout', token.client.rinfo, msg);
+        this.mainWindow.webContents.send('device:stdout', token.client, msg);
 
         if (clearTokens)
           this.mainWindow.webContents.send('device:clear-token', token.uuid);
