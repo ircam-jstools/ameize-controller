@@ -75,13 +75,18 @@ app.on('activate', () => {
   }
 });
 
-app.on('will-quit', () => {
-  console.log('quitting app...', process.pid);
-  discoveryServer.stop();
-  tcpServer.close();
+const exitHandler = () => {
+  try {
+    discoveryServer.stop();
+    tcpServer.close();
+    terminate(process.pid);
+  } catch (error) {
+    // do not throw any more
+    // console.log('exit catch: ', error);
+  }
+};
 
-  terminate(process.pid);
-});
+app.on('before-quit', () => exitHandler() );
 
 /**
  * Auto Updater
