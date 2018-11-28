@@ -44,15 +44,18 @@
     <div class="client-list" :style="clientListStyles">
       <h3>client list</h3>
       <ul>
-        <li class="client" v-for="client in clients">
-          <div class="connection" v-bind:class="{ active : client.connected }">&nbsp;</div>
-          <p>{{ client.hostname }} ({{ client.address }}:{{ client.port }})</p>
+        <li class="client" v-for="status in clientStatuses">
+          <div class="connection" v-bind:class="{ active : status.connected }">&nbsp;</div>
+          <p>{{ status.hostname }} ({{ status.address }}:{{ status.port }})
+            {{ status.syncing ? 'syncing' : '' }}
+            {{ status.watching ? 'watching' : '' }}
+            {{ status.forked ? 'forked' : '' }}
+            {{ status.executing ? 'executing' : '' }}
+          </p>
         </li>
       </ul>
     </div>
 
-    <!-- for debug or later gui improvements -->
-    <!-- <pre>{{ tokens }}</pre> -->
   </div>
 </template>
 
@@ -110,16 +113,49 @@
           menuHeight = menuSize.height;
 
         const clientListHeight = windowSize.height - menuHeight - this.commandsHeight;
-        console.log(clientListHeight, `height: $(clientListHeight}px;`);
 
         return `height: ${clientListHeight}px;`;
+      },
+      clientStatuses() {
+        const clients = this.$store.getters['clients/all'];
+        const tokens = this.$store.getters['clients/tokens'];
+        const statuses = clients.map( (client) => {
+          const status = Object.assign({}, client);
+
+          status.syncing = (undefined !== tokens.find(token => {
+            return (token.client.hostname === client.hostname
+                    && token.type === 'sync-directory')
+                    // empty status
+          }));
+
+          status.watching = (undefined !== tokens.find(token => {
+            return (token.client.hostname === client.hostname
+                    && token.type === 'watch-directory'
+                    && token.status === 'watching')
+          }));
+
+          status.forked = (undefined !== tokens.find(token => {
+            return (token.client.hostname === client.hostname
+                    && token.type === 'fork-process'
+                    && token.status === 'running')
+          }));
+
+          status.executing = (undefined !== tokens.find(token => {
+            return (token.client.hostname === client.hostname
+                    && token.type === 'execute-cmd')
+                    // empty status
+          }));
+
+          return status;
+        }); // clients
+
+        return statuses;
       }
     },
 
     mounted() {
       const $commands = this.$el.querySelector('.commands');
       this.commandsHeight = $commands.getBoundingClientRect().height;
-      console.log(this.$commandsHeight);
     },
 
     updated() {
@@ -146,7 +182,6 @@
         const tokens = connectedClients.map(client => createToken('fork-process', client));
         this.$store.dispatch('clients/addTokens', tokens);
 
-        console.log(tokens);
         this.$electron.ipcRenderer.send('devices:fork-process', this.processCwd, this.processCmd, tokens);
       },
       killProcess() {
