@@ -43,7 +43,7 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     app.quit();
-    mainWindow = null;
+    // mainWindow = null;
   });
 
   mainWindow.once('show', () => {
@@ -76,11 +76,15 @@ app.on('activate', () => {
 });
 
 app.on('will-quit', () => {
-  console.log('quitting app...', process.pid);
-  discoveryServer.stop();
-  tcpServer.close();
+  console.log('will quitting app...', process.pid);
 
-  terminate(process.pid);
+  try {
+    discoveryServer.stop();
+    tcpServer.close();
+    terminate(process.pid);
+  } catch(err) {
+
+  }
 });
 
 /**

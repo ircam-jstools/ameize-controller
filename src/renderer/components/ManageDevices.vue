@@ -110,8 +110,6 @@
           menuHeight = menuSize.height;
 
         const clientListHeight = windowSize.height - menuHeight - this.commandsHeight;
-        console.log(clientListHeight, `height: $(clientListHeight}px;`);
-
         return `height: ${clientListHeight}px;`;
       }
     },
@@ -119,7 +117,6 @@
     mounted() {
       const $commands = this.$el.querySelector('.commands');
       this.commandsHeight = $commands.getBoundingClientRect().height;
-      console.log(this.$commandsHeight);
     },
 
     updated() {
