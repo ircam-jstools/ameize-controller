@@ -5,6 +5,8 @@
 > 
 > cf. [https://github.com/ircam-jstools/ameize-client](https://github.com/ircam-jstools/ameize-client)
 
+On MacOS, you should disable the firewall, to prevent leak of UDP socket (that prevent re-connection).
+
 #### Build Setup
 
 ``` bash
