@@ -7,7 +7,6 @@ const state = {
 const mutations = {
   ADD_CLIENT(state, client) {
     const hostname = client.hostname;
-    console.log(hostname)
     const targetClient = state.clients.find(client => client.hostname === hostname);
 
     if (targetClient) {
@@ -100,7 +99,6 @@ const getters = {
   },
   connected(state) {
     const connected = state.clients.filter(client => client.connected === true);
-    console.log(connected)
     return connected;
   },
   logs(state) {

@@ -42,7 +42,7 @@
     </div>
 
     <div class="client-list" :style="clientListStyles">
-      <h3>client list</h3>
+      <h3>client list (#connected: {{ clientStatuses.filter(s => s.connected).length }})</h3>
       <ul>
         <li class="client" v-for="status in clientStatuses">
           <div class="connection" v-bind:class="{ active : status.connected }">&nbsp;</div>
@@ -118,7 +118,7 @@
       clientStatuses() {
         const clients = this.$store.getters['clients/all'];
         const tokens = this.$store.getters['clients/tokens'];
-        const statuses = clients.map( (client) => {
+        const statuses = clients.map(client => {
           const status = Object.assign({}, client);
 
           status.syncing = (undefined !== tokens.find(token => {
@@ -146,7 +146,7 @@
           }));
 
           return status;
-        }); // clients
+        }).sort((a, b) => a.hostname < b.hostname ? -1 : 1); // clients
 
         return statuses;
       }

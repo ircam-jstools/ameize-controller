@@ -55,8 +55,12 @@ const manageDevices = {
           }
 
           if (type === 'HANDSHAKE') {
-            const infos = client.address();
-            infos.hostname = payload.hostname;
+            const infos = {
+              address: client.remoteAddress,
+              port: client.remotePort,
+              family: client.remoteFamily,
+              hostname: payload.hostname,
+            };
 
             clientInfosMap.set(client, infos);
             hostnameClientMap.set(infos.hostname, client);
@@ -68,8 +72,15 @@ const manageDevices = {
         }
       });
 
+      client.on('close', () => { /* console.log('socket close'); */ });
+      client.on('error', () => { /* console.log('socket error'); */ });
+      client.on('end', () => { /* console.log('socket end'); */ });
+      client.on('timeout', () => { /* console.log('socket timeout'); */ });
+
       // delete client and notify main window
-      client.on('end', () => {
+      // @note - if the client disconnect abruptely, this will only get after
+      // after the server tries to send new message and fails
+      client.on('close', () => {
         const infos = clientInfosMap.get(client);
         mainWindow.webContents.send('client:disconnect', infos);
 
@@ -184,22 +195,23 @@ const manageDevices = {
             + ` --archive --exclude="node_modules" --delete-after`
             + ` "${localDirectory}/" "${destinationDirectory}"`;
 
-      console.log('cmd: ', cmd);
+      // console.log('cmd: ', cmd);
 
       exec(cmd, (err, stdout, stderr) => {
         if (err) {
           return console.error('Error: ', err);
         }
 
-        console.log('stdout: ', stdout.toString());
-        console.log('stderr; ', stderr.toString());
+        // console.log('stdout: ', stdout.toString());
+        // console.log('stderr; ', stderr.toString());
 
         // token has { address, port } has rinfo does
         const msg = `"${remoteDirectory}" successfully synchronized\n`;
         this.mainWindow.webContents.send('device:stdout', token.client, msg);
 
-        if (clearTokens)
+        if (clearTokens) {
           this.mainWindow.webContents.send('device:clear-token', token.uuid);
+        }
       });
     });
   },
