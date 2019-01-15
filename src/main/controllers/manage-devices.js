@@ -26,6 +26,7 @@ const manageDevices = {
     this.syncDirectory = this.syncDirectory.bind(this);
     this.startWatchingDirectory = this.startWatchingDirectory.bind(this);
     this.stopWatchingDirectory = this.stopWatchingDirectory.bind(this);
+    this.keepaliveClients = this.keepaliveClients.bind(this);
 
     ipcMain.on('devices:execute-cmd', this.executeCmd);
     ipcMain.on('devices:fork-process', this.forkProcess);
@@ -89,6 +90,18 @@ const manageDevices = {
       });
     });
 
+    setInterval(this.keepaliveClients, 20 * 1000);
+  },
+
+  keepaliveClients() {
+    for (let [client, infos] of clientInfosMap) {
+      const req = {
+        type: 'PING',
+        payload: {},
+      };
+
+      client.write(JSON.stringify(req) + MSG_DELIMITER);
+    }
   },
 
   dispatch(client, type, payload) {
